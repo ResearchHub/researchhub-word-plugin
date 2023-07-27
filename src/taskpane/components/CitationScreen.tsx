@@ -2,15 +2,19 @@
 
 import { Input, Checkbox, Button } from "@fluentui/react-components";
 import { css, StyleSheet } from "aphrodite";
-import * as React from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { fetchCurrentUserReferenceCitations } from "../api/fetchCurrentUserReferenceCitation";
 import { useOrgs } from "../Contexts/OrganizationContext";
 // import Cite from "citation-js";
 
 const CitationScreen = () => {
-  const [citations, setCitations] = React.useState([]);
-  const [selectedCitations, setSelectedCitations] = React.useState({});
+  const [citations, setCitations] = useState([]);
+  const [selectedCitations, setSelectedCitations] = useState({});
+  const [renderedContentControls, setContentControls] = useState({});
+  // const [contentControlsById, setContentControlsById] = useState({});
   const { currentOrg } = useOrgs();
+  const contentControlsById = useRef();
+  const allCitationsCited = useRef([]);
 
   const resetCitations = (citationList) => {
     const newCitations = {};
@@ -22,7 +26,57 @@ const CitationScreen = () => {
     setSelectedCitations(newCitations);
   };
 
-  React.useEffect(() => {
+  async function contentControlDataChanged(event: Word.ContentControlDataChangedEventArgs) {
+    await Word.run(async (context) => {
+      console.log(`${event.eventType} event detected. IDs of content controls where data was changed:`);
+      console.log(event.ids);
+    });
+  }
+
+  async function contentControlDeleted(event: Word.ContentControlDeletedEventArgs) {
+    await Word.run(async (context) => {
+      const newCitationsCited = [...allCitationsCited.current];
+      event.ids.forEach((eventId) => {
+        const curCitationControl = contentControlsById.current[eventId];
+        if (curCitationControl) {
+          const toRemove = [];
+          curCitationControl.allSelectedCitations.forEach((citationIndex) => {
+            const removeIndex = newCitationsCited.indexOf(parseInt(citationIndex[0], 10));
+            if (removeIndex > -1) {
+              toRemove.push(removeIndex);
+            }
+          });
+
+          toRemove.forEach((indexToRemove) => {
+            newCitationsCited.splice(indexToRemove, 1);
+          });
+        }
+      });
+
+      allCitationsCited.current = newCitationsCited;
+      const newBibliography = createBibliography(newCitationsCited);
+
+      addTextToBibliography(newBibliography);
+    });
+  }
+
+  useEffect(() => {
+    const initializeContentControls = async () => {
+      await Word.run(async (context) => {
+        const allContentControls = context.document.body.contentControls;
+        console.log(allContentControls.items);
+        allContentControls.items.forEach((controlItem) => {
+          contentControlHandler(controlItem);
+        });
+        await context.sync();
+
+        setContentControls(allContentControls);
+      });
+    };
+    initializeContentControls();
+  }, []);
+
+  useEffect(() => {
     const getCitations = async () => {
       const citations = await fetchCurrentUserReferenceCitations({
         getCurrentUserCitation: true,
@@ -44,20 +98,43 @@ const CitationScreen = () => {
     setSelectedCitations(newCitations);
   };
 
-  async function addTextAfterSelection(text) {
+  async function contentControlHandler(contentControlItem) {
+    contentControlItem.onDataChanged.add(contentControlDataChanged);
+    contentControlItem.onDeleted.add(contentControlDeleted);
+    contentControlItem.track();
+  }
+
+  async function addTextAfterSelection(text, allSelectedCitations) {
     await Word.run(async (context) => {
       // Create a proxy object for the document.
       var doc = context.document;
 
       // Queue a command to get the current selection and then create a proxy range object with the results.
       var range = doc.getSelection();
+      const rangeTarget = range.getRange("End");
+      const wordContentControl = rangeTarget.insertContentControl();
+      wordContentControl.tag = "citation";
+      wordContentControl.title = "Citation";
+      wordContentControl.cannotEdit = false;
+      wordContentControl.appearance = "BoundingBox";
+
+      const newContentControlsById = { ...contentControlsById.current };
+      const contentControls = context.document.contentControls;
+
+      // Queue a command to insert text at the end of the selection.
+      wordContentControl.insertText(` ${text} `, Word.InsertLocation.end);
+
+      // Queue a command to load the id property for all of content controls.
+      contentControls.load("id");
+      contentControls.load("text");
 
       // Synchronize the document state by executing the queued commands,
       // and return a promise to indicate task completion.
       await context.sync();
 
-      // Queue a command to insert text at the end of the selection.
-      range.insertText(` ${text}`, Word.InsertLocation.end);
+      newContentControlsById[wordContentControl.id] = { contentControl: wordContentControl, allSelectedCitations };
+      contentControlsById.current = newContentControlsById;
+      contentControlHandler(wordContentControl);
 
       // Synchronize the document state by executing the queued commands,
       // and return a promise to indicate task completion.
@@ -72,20 +149,75 @@ const CitationScreen = () => {
     });
   }
 
-  const insertCitation = () => {
-    const allSelectedCitations = Object.entries(selectedCitations).filter((entry) => entry[1]);
-    // @ts-ignore
-    const citationObject = new Cite();
-    for (let i = 0; i < allSelectedCitations.length; i++) {
-      const selectedCitationIndex = parseInt(allSelectedCitations[i][0], 10);
-      citationObject.add(citations[selectedCitationIndex].fields);
-    }
+  async function addTextToBibliography(bibliography) {
+    await Word.run(async (context) => {
+      /**
+       * Insert your Word code here
+       */
 
-    const bibliography = citationObject.format("bibliography", {
+      let bibliographyExists = false;
+      let bibliographyControls = null;
+      const contentControls = context.document.contentControls;
+      // Queue a command to load the id property for all of the content controls.
+      contentControls.load();
+
+      // Synchronize the document state by executing the queued commands,
+      // and return a promise to indicate task completion.
+      await context.sync();
+
+      contentControls.items.forEach((contentControlItem) => {
+        if (contentControlItem.tag === "bibliography") {
+          bibliographyExists = true;
+          bibliographyControls = contentControlItem;
+        }
+      });
+
+      const range = context.document.body.getRange("Content");
+      const rangeTarget = range.getRange("End");
+
+      if (bibliographyExists) {
+        bibliographyControls.insertText(`\n ${bibliography}`, Word.InsertLocation.replace);
+      } else {
+        const wordContentControl = rangeTarget.insertContentControl();
+        wordContentControl.tag = "bibliography";
+        wordContentControl.title = "Bibliography";
+        wordContentControl.cannotEdit = false;
+        wordContentControl.appearance = "BoundingBox";
+
+        wordContentControl.insertParagraph(bibliography, Word.InsertLocation.end);
+        contentControlHandler(wordContentControl);
+      }
+
+      await context.sync();
+    });
+  }
+
+  const createBibliography = (allCitationIndices) => {
+    const bibliographyObject = new Cite();
+    allCitationIndices.forEach((curIndex) => {
+      bibliographyObject.add(citations[curIndex].fields);
+    });
+    const bibliography = bibliographyObject.format("bibliography", {
       format: "text",
       template: "apa",
       lang: "en-US",
     });
+
+    return bibliography;
+  };
+
+  const insertCitation = () => {
+    const allSelectedCitations = Object.entries(selectedCitations).filter((entry) => entry[1]);
+    // @ts-ignore
+    const citationObject = new Cite();
+    const newCitations = [...allCitationsCited.current];
+    for (let i = 0; i < allSelectedCitations.length; i++) {
+      const selectedCitationIndex = parseInt(allSelectedCitations[i][0], 10);
+      newCitations.push(selectedCitationIndex);
+      citationObject.add(citations[selectedCitationIndex].fields);
+    }
+
+    allCitationsCited.current = newCitations;
 
     const inlineCitation = citationObject.format("citation", {
       format: "text",
@@ -93,22 +225,16 @@ const CitationScreen = () => {
       lang: "en-US",
     });
 
-    addTextAfterSelection(inlineCitation);
+    addTextAfterSelection(inlineCitation, allSelectedCitations);
 
-    Word.run(async (context) => {
-      /**
-       * Insert your Word code here
-       */
+    const newBibliography = createBibliography(newCitations);
 
-      context.document.body.insertParagraph(bibliography, Word.InsertLocation.end);
-
-      await context.sync();
-    });
+    addTextToBibliography(newBibliography);
 
     resetCitations(citations);
   };
 
-  const hasSelectedCitations = React.useMemo(() => {
+  const hasSelectedCitations = useMemo(() => {
     return Object.entries(selectedCitations).filter((entry) => entry[1]).length > 0;
   }, [selectedCitations]);
 

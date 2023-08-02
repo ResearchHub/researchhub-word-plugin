@@ -5,14 +5,16 @@ import { css, StyleSheet } from "aphrodite";
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { fetchCurrentUserReferenceCitations } from "../api/fetchCurrentUserReferenceCitation";
 import { useOrgs } from "../Contexts/OrganizationContext";
+import { useFolders } from "../Contexts/ActiveFolderContext";
 // import Cite from "citation-js";
 
 const CitationScreen = () => {
   const [citations, setCitations] = useState([]);
+  const [folders, setFolders] = useState([]);
   const [selectedCitations, setSelectedCitations] = useState({});
   const [renderedContentControls, setContentControls] = useState({});
-  // const [contentControlsById, setContentControlsById] = useState({});
   const { currentOrg } = useOrgs();
+  const { activeFolder, currentOrgFolders } = useFolders();
   const contentControlsById = useRef();
   const allCitationsCited = useRef([]);
 
@@ -87,6 +89,7 @@ const CitationScreen = () => {
 
       setCitations(citations);
     };
+
     if (currentOrg.id) {
       getCitations();
     }
@@ -122,7 +125,8 @@ const CitationScreen = () => {
       const contentControls = context.document.contentControls;
 
       // Queue a command to insert text at the end of the selection.
-      wordContentControl.insertText(` ${text} `, Word.InsertLocation.end);
+      wordContentControl.insertText(` ${text}`, Word.InsertLocation.end);
+      range.insertText(` `, Word.InsertLocation.end);
 
       // Queue a command to load the id property for all of content controls.
       contentControls.load("id");
@@ -184,6 +188,8 @@ const CitationScreen = () => {
         wordContentControl.cannotEdit = false;
         wordContentControl.appearance = "BoundingBox";
 
+        rangeTarget.insertParagraph(``, Word.InsertLocation.end);
+
         wordContentControl.insertParagraph(bibliography, Word.InsertLocation.end);
         contentControlHandler(wordContentControl);
       }
@@ -238,12 +244,17 @@ const CitationScreen = () => {
     return Object.entries(selectedCitations).filter((entry) => entry[1]).length > 0;
   }, [selectedCitations]);
 
+  const foldersToRender = activeFolder ? activeFolder.children : currentOrgFolders;
+
   return (
     <div className={css(styles.container)}>
       <div>
         <Input placeholder={"Search for a citation"} className={css(styles.input)} />
       </div>
       <div>
+        {foldersToRender.map((folder, index) => {
+          return <div>{folder.name}</div>;
+        })}
         {citations.map((citation, index) => {
           return (
             <>

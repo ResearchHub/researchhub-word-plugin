@@ -20,7 +20,7 @@ var authenticator = new Authenticator();
 const GOOGLE_CLIENT_ID = "192509748493-uuidcme05mco3k32188n8qvih89j46jd.apps.googleusercontent.com";
 // register Google endpoint using
 authenticator.endpoints.registerGoogleAuth(GOOGLE_CLIENT_ID, {
-  redirectUrl: "https://localhost:3000/taskpane.html",
+  redirectUrl: "https://localhost:3005/taskpane.html",
 });
 
 const render = (Component) => {

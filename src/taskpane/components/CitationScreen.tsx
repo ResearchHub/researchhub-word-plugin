@@ -271,8 +271,12 @@ const CitationScreen = () => {
 
   return (
     <div className={css(styles.container)}>
-      <div>
-        <Input placeholder={"Search for a citation"} className={css(styles.input)} />
+      <div className={css(styles.searchContainer)}>
+        <Input
+          placeholder={"Search for a citation"}
+          className={css(styles.input)}
+          contentAfter={<Icon iconName={"Search"} className={css(styles.searchIcon)} />}
+        />
       </div>
       <TabList
         selectedValue={activeTab}
@@ -386,10 +390,14 @@ const styles = StyleSheet.create({
     padding: "8px 16px",
   },
   tabContainer: {
-    paddingTop: 16,
+    paddingTop: 10,
     gap: 16,
     paddingBottom: 16,
   },
+  searchContainer: {
+    position: "relative",
+  },
+  searchIcon: {},
 });
 
 export default CitationScreen;

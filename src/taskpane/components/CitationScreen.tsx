@@ -1,12 +1,15 @@
 // @ts-nocheck
 
-import { Input, Checkbox, Button, TabList, Tab, SelectTabEvent, SelectTabData } from "@fluentui/react-components";
+import { Input, Button, TabList, Tab, SelectTabEvent, SelectTabData } from "@fluentui/react-components";
+import { Icon } from "@fluentui/react/lib/Icon";
 import { css, StyleSheet } from "aphrodite";
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { fetchCurrentUserReferenceCitations } from "../api/fetchCurrentUserReferenceCitation";
 import { useOrgs } from "../Contexts/OrganizationContext";
 import { useFolders } from "../Contexts/ActiveFolderContext";
 import FolderComponent from "./FolderComponent";
+import CitationComponent from "./CitationComponent";
+import Settings from "./Settings";
 
 const CitationScreen = () => {
   const [citations, setCitations] = useState([]);
@@ -15,6 +18,7 @@ const CitationScreen = () => {
   const [fetchingCitations, setFetchingCitations] = useState(false);
   const [selectedCitations, setSelectedCitations] = useState({});
   const [renderedContentControls, setContentControls] = useState({});
+  const [citationStyle, setCitationStyle] = useState("apa");
   const [activeTab, setActiveTab] = useState("citations");
   const { currentOrg } = useOrgs();
   const { activeFolder, currentOrgFolders, isFetchingFolders } = useFolders();
@@ -34,6 +38,17 @@ const CitationScreen = () => {
 
     setSelectedCitations(newCitations);
   };
+
+  function addCslStyle(name) {
+    return Cite.util
+      .fetchFileAsync(`https://zotero.org/styles/${name}`)
+      .then((xml) => Cite.CSL.register.addTemplate(name, xml));
+  }
+
+  useEffect(() => {
+    addCslStyle("ieee");
+    addCslStyle("nature");
+  }, []);
 
   async function contentControlDataChanged(event: Word.ContentControlDataChangedEventArgs) {
     await Word.run(async (context) => {
@@ -198,10 +213,7 @@ const CitationScreen = () => {
         wordContentControl.title = "Bibliography";
         wordContentControl.cannotEdit = false;
         wordContentControl.appearance = "BoundingBox";
-
-        rangeTarget.insertParagraph(``, Word.InsertLocation.end);
-
-        wordContentControl.insertParagraph(bibliography, Word.InsertLocation.end);
+        wordContentControl.insertText(bibliography, Word.InsertLocation.end);
         contentControlHandler(wordContentControl);
       }
 
@@ -216,7 +228,7 @@ const CitationScreen = () => {
     });
     const bibliography = bibliographyObject.format("bibliography", {
       format: "text",
-      template: "apa",
+      template: citationStyle,
       lang: "en-US",
     });
 
@@ -238,7 +250,7 @@ const CitationScreen = () => {
 
     const inlineCitation = citationObject.format("citation", {
       format: "text",
-      template: "apa",
+      template: citationStyle,
       lang: "en-US",
     });
 
@@ -256,8 +268,6 @@ const CitationScreen = () => {
   }, [selectedCitations]);
 
   const foldersToRender = activeFolder ? activeFolder.children : currentOrgFolders;
-
-  console.log(tabHover);
 
   return (
     <div className={css(styles.container)}>
@@ -294,40 +304,22 @@ const CitationScreen = () => {
         >
           Folders
         </Tab>
+        <Tab value="settings" style={{ marginTop: 4, marginLeft: "auto", fontSize: 14 }}>
+          <Icon iconName="Settings" />
+        </Tab>
       </TabList>
       {activeTab === "citations" &&
         !fetchingCitations &&
         citations.map((citation, index) => {
           return (
-            <>
-              <div key={`citation-${index}`} className={css(styles.citation)}>
-                <Checkbox
-                  size="large"
-                  className={css(styles.checkbox)}
-                  input={{
-                    className: css(styles.checkBoxInput),
-                  }}
-                  checked={selectedCitations[index]}
-                  onChange={() => citationClicked(index)}
-                  label={""}
-                ></Checkbox>
-                <div className={css(styles.citationLabel)} onClick={() => citationClicked(index)}>
-                  <p className={css(styles.citationTitle)}>{citation.fields.title}</p>
-                  <p>
-                    {citation.fields.creators.map((creator, index) => {
-                      if (index === 3 && index !== citation.fields.creators.length - 1) {
-                        return "... ";
-                      }
-                      if (index > 2 && index !== citation.fields.creators.length - 1) {
-                        return null;
-                      }
-                      return creator.first_name + " " + creator.last_name[0] + "., ";
-                    })}
-                    {citation.fields.date.split("-")[0]}
-                  </p>
-                </div>
-              </div>
-            </>
+            <div key={index}>
+              <CitationComponent
+                citation={citation}
+                selectedCitations={selectedCitations}
+                citationClicked={citationClicked}
+                index={index}
+              />
+            </div>
           );
         })}
 
@@ -337,10 +329,21 @@ const CitationScreen = () => {
         foldersToRender.map((folder, index) => {
           return (
             <div key={index}>
-              <FolderComponent folder={folder} />
+              <FolderComponent
+                folder={folder}
+                citations={citations}
+                selectedCitations={selectedCitations}
+                citationClicked={citationClicked}
+              />
             </div>
           );
         })}
+      {activeTab === "settings" && (
+        <div>
+          <Settings setCitationStyle={setCitationStyle} citationStyle={citationStyle} />
+        </div>
+      )}
+
       {hasSelectedCitations && (
         <div className={css(styles.bottomDrawer)}>
           <Button className={css(styles.button)} onClick={insertCitation}>
@@ -361,29 +364,6 @@ const styles = StyleSheet.create({
     width: "100%",
     padding: "8px 16px",
     borderRadius: 4,
-  },
-  citation: {
-    paddingBottom: 8,
-    borderBottom: "1px solid #ddd",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "flex-start",
-    paddingTop: 16,
-  },
-  citationTitle: {
-    fontWeight: 700,
-    marginTop: 0,
-  },
-  checkbox: {
-    border: "1px solid #ddd",
-    marginTop: 2,
-  },
-  checkBoxInput: {
-    border: "1px solid #ddd",
-  },
-  citationLabel: {
-    marginLeft: 16,
-    textAlign: "left",
   },
   bottomDrawer: {
     position: "fixed",
@@ -409,30 +389,6 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     gap: 16,
     paddingBottom: 16,
-  },
-  tab: {
-    fontSize: 16,
-  },
-  inactiveHover: {
-    ":after": {
-      content: "''",
-      backgroundColor: "#ddd",
-      position: "absolute",
-      height: 3,
-      width: "100%",
-      top: 24,
-    },
-  },
-  activeTab: {
-    fontWeight: "bold",
-    ":after": {
-      content: "''",
-      backgroundColor: "rgb(17, 94, 163)",
-      position: "absolute",
-      height: 3,
-      width: "100%",
-      top: 24,
-    },
   },
 });
 

@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { Icon } from "@fluentui/react/lib/Icon";
 import { StyleSheet, css } from "aphrodite";
+import CitationComponent from "./CitationComponent";
 
-const FolderComponent = ({ folder }) => {
+const FolderComponent = ({ folder, citations, selectedCitations, citationClicked }) => {
   const [isOpen, setIsOpen] = useState(false);
   return (
     <div>
@@ -15,10 +16,33 @@ const FolderComponent = ({ folder }) => {
       {isOpen &&
         folder.children.map((innerFolder, index) => {
           return (
-            <div className={css(styles.innerChildren)}>
-              <FolderComponent folder={innerFolder} key={index} />
+            <div className={css(styles.innerChildren)} key={index}>
+              <FolderComponent
+                folder={innerFolder}
+                selectedCitations={selectedCitations}
+                citationClicked={citationClicked}
+                citations={citations}
+              />
             </div>
           );
+        })}
+
+      {isOpen &&
+        citations.map((citation, index) => {
+          if (citation.project === folder.id) {
+            return (
+              <div key={index} className={css(styles.innerChildren)}>
+                <CitationComponent
+                  citation={citation}
+                  selectedCitations={selectedCitations}
+                  citationClicked={citationClicked}
+                  index={index}
+                />
+              </div>
+            );
+          } else {
+            return null;
+          }
         })}
     </div>
   );
@@ -43,6 +67,6 @@ const styles = StyleSheet.create({
     color: "#7BD3F9",
   },
   innerChildren: {
-    marginLeft: 16,
+    paddingLeft: 16,
   },
 });

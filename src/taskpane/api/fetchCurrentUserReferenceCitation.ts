@@ -34,15 +34,15 @@ export const fetchCurrentUserReferenceCitations = async ({
 
 type Payload = {
   // TODO: calvinhlee - expand this as more privacy features are added
-  organization: ID;
+  organization: number;
 };
 
 type ReferenceOrgArgs = {
   payload: Payload;
 };
 
-export const fetchReferenceOrgProjects = async ({ payload: { organization } }: ReferenceOrgArgs): void => {
-  const res = fetch(generateApiUrl(`citation_project/get_projects/${organization}`), GET_CONFIG({}));
+export const fetchReferenceOrgProjects = async ({ payload: { organization } }: ReferenceOrgArgs) => {
+  const res = await fetch(generateApiUrl(`citation_project/get_projects/${organization}`), GET_CONFIG({}));
 
   const json = await res.json();
   return json;

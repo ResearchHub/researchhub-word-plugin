@@ -4,7 +4,7 @@ import LoginScreen from "./LoginScreen";
 import { RESEARCHHUB_AUTH_TOKEN } from "../../../api/api";
 import CitationScreen from "./CitationScreen";
 import { OrganizationContextProvider } from "../Contexts/OrganizationContext";
-import { ActiveFolderContext } from "../Contexts/ActiveFolderContext";
+import { ActiveFolderContextProvider } from "../Contexts/ActiveFolderContext";
 // import GoogleIcon from "~/assets/google.png";
 /* global Word, require */
 
@@ -38,7 +38,7 @@ const App = ({ authenticator }) => {
 
   return (
     <OrganizationContextProvider isLoggedIn={isLoggedIn}>
-      <ActiveFolderContext>
+      <ActiveFolderContextProvider>
         <div>
           {isLoggedIn ? (
             <div>{whichScreen === "citation-screen" ? <CitationScreen /> : <div></div>}</div>
@@ -46,7 +46,7 @@ const App = ({ authenticator }) => {
             <LoginScreen setIsLoggedIn={setIsLoggedIn} authenticator={authenticator} />
           )}
         </div>
-      </ActiveFolderContext>
+      </ActiveFolderContextProvider>
     </OrganizationContextProvider>
   );
 };

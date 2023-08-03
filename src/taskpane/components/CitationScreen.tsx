@@ -1,22 +1,29 @@
 // @ts-nocheck
 
-import { Input, Checkbox, Button } from "@fluentui/react-components";
+import { Input, Checkbox, Button, TabList, Tab, SelectTabEvent, SelectTabData } from "@fluentui/react-components";
 import { css, StyleSheet } from "aphrodite";
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { fetchCurrentUserReferenceCitations } from "../api/fetchCurrentUserReferenceCitation";
 import { useOrgs } from "../Contexts/OrganizationContext";
 import { useFolders } from "../Contexts/ActiveFolderContext";
-// import Cite from "citation-js";
+import FolderComponent from "./FolderComponent";
 
 const CitationScreen = () => {
   const [citations, setCitations] = useState([]);
   const [folders, setFolders] = useState([]);
+  const [tabHover, setTabHover] = useState("");
+  const [fetchingCitations, setFetchingCitations] = useState(false);
   const [selectedCitations, setSelectedCitations] = useState({});
   const [renderedContentControls, setContentControls] = useState({});
+  const [activeTab, setActiveTab] = useState("citations");
   const { currentOrg } = useOrgs();
-  const { activeFolder, currentOrgFolders } = useFolders();
+  const { activeFolder, currentOrgFolders, isFetchingFolders } = useFolders();
   const contentControlsById = useRef();
   const allCitationsCited = useRef([]);
+
+  const onTabSelect = (event: SelectTabEvent, data: SelectTabData) => {
+    setActiveTab(data.value);
+  };
 
   const resetCitations = (citationList) => {
     const newCitations = {};
@@ -80,10 +87,14 @@ const CitationScreen = () => {
 
   useEffect(() => {
     const getCitations = async () => {
+      setFetchingCitations(true);
       const citations = await fetchCurrentUserReferenceCitations({
         getCurrentUserCitation: true,
         organizationID: currentOrg.id,
+        projectID: activeFolder?.projectID,
       });
+
+      setFetchingCitations(false);
 
       resetCitations(citations);
 
@@ -246,16 +257,47 @@ const CitationScreen = () => {
 
   const foldersToRender = activeFolder ? activeFolder.children : currentOrgFolders;
 
+  console.log(tabHover);
+
   return (
     <div className={css(styles.container)}>
       <div>
         <Input placeholder={"Search for a citation"} className={css(styles.input)} />
       </div>
-      <div>
-        {foldersToRender.map((folder, index) => {
-          return <div>{folder.name}</div>;
-        })}
-        {citations.map((citation, index) => {
+      <TabList
+        selectedValue={activeTab}
+        onTabSelect={onTabSelect}
+        defaultSelectedValue={"citations"}
+        className={css(styles.tabContainer)}
+      >
+        <Tab
+          onMouseEnter={() => setTabHover("citations")}
+          onMouseLeave={() => setTabHover("")}
+          className={css(
+            styles.tab,
+            tabHover === "citations" && styles.inactiveHover,
+            activeTab === "citations" && styles.activeTab
+          )}
+          value="citations"
+        >
+          Citations
+        </Tab>
+        <Tab
+          onMouseEnter={() => setTabHover("folders")}
+          onMouseLeave={() => setTabHover("")}
+          className={css(
+            styles.tab,
+            tabHover === "folders" && styles.inactiveHover,
+            activeTab === "folders" && styles.activeTab
+          )}
+          value="folders"
+        >
+          Folders
+        </Tab>
+      </TabList>
+      {activeTab === "citations" &&
+        !fetchingCitations &&
+        citations.map((citation, index) => {
           return (
             <>
               <div key={`citation-${index}`} className={css(styles.citation)}>
@@ -288,7 +330,17 @@ const CitationScreen = () => {
             </>
           );
         })}
-      </div>
+
+      {activeTab === "folders" &&
+        !fetchingCitations &&
+        !isFetchingFolders &&
+        foldersToRender.map((folder, index) => {
+          return (
+            <div key={index}>
+              <FolderComponent folder={folder} />
+            </div>
+          );
+        })}
       {hasSelectedCitations && (
         <div className={css(styles.bottomDrawer)}>
           <Button className={css(styles.button)} onClick={insertCitation}>
@@ -331,6 +383,7 @@ const styles = StyleSheet.create({
   },
   citationLabel: {
     marginLeft: 16,
+    textAlign: "left",
   },
   bottomDrawer: {
     position: "fixed",
@@ -351,6 +404,35 @@ const styles = StyleSheet.create({
     color: "#fff",
     border: "none",
     padding: "8px 16px",
+  },
+  tabContainer: {
+    paddingTop: 16,
+    gap: 16,
+    paddingBottom: 16,
+  },
+  tab: {
+    fontSize: 16,
+  },
+  inactiveHover: {
+    ":after": {
+      content: "''",
+      backgroundColor: "#ddd",
+      position: "absolute",
+      height: 3,
+      width: "100%",
+      top: 24,
+    },
+  },
+  activeTab: {
+    fontWeight: "bold",
+    ":after": {
+      content: "''",
+      backgroundColor: "rgb(17, 94, 163)",
+      position: "absolute",
+      height: 3,
+      width: "100%",
+      top: 24,
+    },
   },
 });
 

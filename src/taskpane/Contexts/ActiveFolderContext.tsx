@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import React, { Context, createContext, useContext, useEffect, useState } from "react";
 // import { emptyFncWithMsg, isEmpty, isNullOrUndefined, silentEmptyFnc } from "~/config/utils/nullchecks";
 // import { NullableString } from "~/config/types/root_types";
@@ -16,9 +18,9 @@ export type ReferenceActiveProjectContextValueType = {
   activeFolder: ProjectValue | null;
   currentOrgFolders: ProjectValue[];
   isFetchingFolders: boolean;
-  setActiveFolder: (proj: ProjectValue) => void;
-  setCurrentOrgFolders: (folders: ProjectValue[]) => void;
-  setIsFetchingFolders: (bool: boolean) => void;
+  setActiveFolder: (proj: ProjectValue | undefined) => void;
+  setCurrentOrgFolders: (folders: ProjectValue[] | undefined) => void;
+  setIsFetchingFolders: (bool: boolean | undefined) => void;
 };
 
 export const DEFAULT_VALUE = {
@@ -30,14 +32,15 @@ export const DEFAULT_VALUE = {
   setIsFetchingFolders: () => {},
 };
 
-export const ReferenceActiveProjectContext: Context<ReferenceActiveProjectContextValueType> =
+export const ActiveFolderContext: Context<ReferenceActiveProjectContextValueType> =
   createContext<ReferenceActiveProjectContextValueType>(DEFAULT_VALUE);
 
 export const useFolders = (): ReferenceActiveProjectContextValueType => {
-  return useContext(ReferenceActiveProjectContext);
+  return useContext(ActiveFolderContext);
 };
 
-export function ActiveFolderContext({ children }) {
+// eslint-disable-next-line react/prop-types
+export function ActiveFolderContextProvider({ children }) {
   const [activeFolder, setActiveFolder] = useState<ProjectValue | null>(null);
   const [currentOrgFolders, setCurrentOrgFolders] = useState<ProjectValue[]>([]);
   const [isFetchingFolders, setIsFetchingFolders] = useState<boolean>(true);

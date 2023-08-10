@@ -3,13 +3,18 @@
 import { Input, Button, TabList, Tab, SelectTabEvent, SelectTabData } from "@fluentui/react-components";
 import { Icon } from "@fluentui/react/lib/Icon";
 import { css, StyleSheet } from "aphrodite";
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, SyntheticEvent } from "react";
+import ReactPlaceholder from "react-placeholder";
+import "react-placeholder/lib/reactPlaceholder.css";
+
 import { fetchCurrentUserReferenceCitations } from "../api/fetchCurrentUserReferenceCitation";
 import { useOrgs } from "../Contexts/OrganizationContext";
 import { useFolders } from "../Contexts/ActiveFolderContext";
 import FolderComponent from "./FolderComponent";
 import CitationComponent from "./CitationComponent";
 import Settings from "./Settings";
+import { RectShape } from "react-placeholder/lib/placeholders";
+import { GET_CONFIG, generateApiUrl } from "../../../api/api";
 
 const CitationScreen = () => {
   const [citations, setCitations] = useState([]);
@@ -24,6 +29,7 @@ const CitationScreen = () => {
   const { activeFolder, currentOrgFolders, isFetchingFolders } = useFolders();
   const contentControlsById = useRef();
   const allCitationsCited = useRef([]);
+  const citationSearchTimeout = useRef();
 
   const onTabSelect = (event: SelectTabEvent, data: SelectTabData) => {
     setActiveTab(data.value);
@@ -269,12 +275,48 @@ const CitationScreen = () => {
 
   const foldersToRender = activeFolder ? activeFolder.children : currentOrgFolders;
 
+  const searchForCitation = async (e: SyntheticEvent) => {
+    const searchQuery = e.target.value;
+    if (searchQuery) {
+      const url = generateApiUrl(`search/citation`, `?search=${searchQuery}`);
+      setFetchingCitations(true);
+      clearTimeout(citationSearchTimeout.current);
+      citationSearchTimeout.current = setTimeout(() => {
+        fetchCitationsWithQuery(url);
+      }, 300);
+    } else {
+      const citations = await fetchCurrentUserReferenceCitations({
+        getCurrentUserCitation: true,
+        organizationID: currentOrg.id,
+        projectID: activeFolder?.projectID,
+      });
+
+      setFetchingCitations(false);
+
+      resetCitations(citations);
+
+      setCitations(citations);
+    }
+  };
+
+  const fetchCitationsWithQuery = async (url) => {
+    const config = GET_CONFIG({});
+    config.headers["X-organization-id"] = currentOrg.id.toString();
+    const resp = await fetch(url, config);
+    const json = await resp.json();
+    setFetchingCitations(false);
+    const citations = json.results;
+    setCitations(citations);
+    resetCitations(citations);
+  };
+
   return (
     <div className={css(styles.container)}>
       <div className={css(styles.searchContainer)}>
         <Input
           placeholder={"Search for a citation"}
           className={css(styles.input)}
+          onChange={searchForCitation}
           contentAfter={<Icon iconName={"Search"} className={css(styles.searchIcon)} />}
         />
       </div>
@@ -312,36 +354,47 @@ const CitationScreen = () => {
           <Icon iconName="Settings" />
         </Tab>
       </TabList>
-      {activeTab === "citations" &&
-        !fetchingCitations &&
-        citations.map((citation, index) => {
-          return (
-            <div key={index}>
-              <CitationComponent
-                citation={citation}
-                selectedCitations={selectedCitations}
-                citationClicked={citationClicked}
-                index={index}
-              />
-            </div>
-          );
-        })}
+      <ReactPlaceholder
+        className={css(styles.placeholderContainer)}
+        ready={!fetchingCitations && !isFetchingFolders}
+        // type={"textRow"}
+        showLoadingAnimation
+        customPlaceholder={Placeholder}
+        // rows={100}
+      >
+        <div>
+          {activeTab === "citations" &&
+            !fetchingCitations &&
+            citations.map((citation, index) => {
+              return (
+                <div key={index}>
+                  <CitationComponent
+                    citation={citation}
+                    selectedCitations={selectedCitations}
+                    citationClicked={citationClicked}
+                    index={index}
+                  />
+                </div>
+              );
+            })}
 
-      {activeTab === "folders" &&
-        !fetchingCitations &&
-        !isFetchingFolders &&
-        foldersToRender.map((folder, index) => {
-          return (
-            <div key={index}>
-              <FolderComponent
-                folder={folder}
-                citations={citations}
-                selectedCitations={selectedCitations}
-                citationClicked={citationClicked}
-              />
-            </div>
-          );
-        })}
+          {activeTab === "folders" &&
+            !fetchingCitations &&
+            !isFetchingFolders &&
+            foldersToRender.map((folder, index) => {
+              return (
+                <div key={index}>
+                  <FolderComponent
+                    folder={folder}
+                    citations={citations}
+                    selectedCitations={selectedCitations}
+                    citationClicked={citationClicked}
+                  />
+                </div>
+              );
+            })}
+        </div>
+      </ReactPlaceholder>
       {activeTab === "settings" && (
         <div>
           <Settings setCitationStyle={setCitationStyle} citationStyle={citationStyle} />
@@ -397,7 +450,29 @@ const styles = StyleSheet.create({
   searchContainer: {
     position: "relative",
   },
+  placeholderContainer: {
+    width: "100%",
+    paddingTop: 8,
+    paddingBottom: 8,
+    height: 56,
+  },
+  placeholderParent: {
+    paddingTop: 16,
+    paddingBottom: 16,
+    borderBottom: "1px solid #ddd",
+  },
   searchIcon: {},
 });
+const Placeholder = (
+  <div style={{ height: "100%", width: "100%" }}>
+    {new Array(6).fill(0).map((_, index) => {
+      return (
+        <div key={index} className={css(styles.placeholderParent)}>
+          <RectShape className={css(styles.placeholderContainer)} color="#EFEFEF" />
+        </div>
+      );
+    })}
+  </div>
+);
 
 export default CitationScreen;

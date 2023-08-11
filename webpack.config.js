@@ -44,6 +44,10 @@ module.exports = async (env, options) => {
           ],
         },
         {
+          test: /\.csl$/i,
+          use: "raw-loader",
+        },
+        {
           test: /\.ts$/,
           exclude: /node_modules/,
           use: {

@@ -16,6 +16,10 @@ import Settings from "./Settings";
 import { RectShape } from "react-placeholder/lib/placeholders";
 import { GET_CONFIG, generateApiUrl } from "../../../api/api";
 
+import ieee from "../../../assets/csl_styles/ieee.csl";
+import nature from "../../../assets/csl_styles/nature.csl";
+import { Spinner } from "@fluentui/react";
+
 const CitationScreen = () => {
   const [citations, setCitations] = useState([]);
   const [folders, setFolders] = useState([]);
@@ -25,6 +29,7 @@ const CitationScreen = () => {
   const [renderedContentControls, setContentControls] = useState({});
   const [citationStyle, setCitationStyle] = useState("apa");
   const [activeTab, setActiveTab] = useState("citations");
+  const [loadingCitation, setLoadingCitation] = useState(false);
   const { currentOrg } = useOrgs();
   const { activeFolder, currentOrgFolders, isFetchingFolders } = useFolders();
   const contentControlsById = useRef();
@@ -45,15 +50,17 @@ const CitationScreen = () => {
     setSelectedCitations(newCitations);
   };
 
-  function addCslStyle(name) {
-    return Cite.util
-      .fetchFileAsync(`https://zotero.org/styles/${name}`)
-      .then((xml) => Cite.CSL.register.addTemplate(name, xml));
+  function addCslStyle(name, file) {
+    Cite.CSL.register.addTemplate(name, file);
+    // const json = resp.json();
+    // return Cite.util
+    //   .fetchFileAsync(`https://zotero.org/styles/${name}`)
+    //   .then((xml) => Cite.CSL.register.addTemplate(name, xml));
   }
 
   useEffect(() => {
-    addCslStyle("ieee");
-    addCslStyle("nature");
+    addCslStyle("ieee", ieee);
+    addCslStyle("nature", nature);
   }, []);
 
   async function contentControlDataChanged(event: Word.ContentControlDataChangedEventArgs) {
@@ -94,7 +101,6 @@ const CitationScreen = () => {
     const initializeContentControls = async () => {
       await Word.run(async (context) => {
         const allContentControls = context.document.body.contentControls;
-        console.log(allContentControls.items);
         allContentControls.items.forEach((controlItem) => {
           contentControlHandler(controlItem);
         });
@@ -230,7 +236,9 @@ const CitationScreen = () => {
   const createBibliography = (allCitationIndices) => {
     const bibliographyObject = new Cite();
     allCitationIndices.forEach((curIndex) => {
-      bibliographyObject.add(citations[curIndex].fields);
+      const json = Cite.input(citations[curIndex].fields.DOI.split("https://doi.org/")[1]);
+
+      bibliographyObject.add(json);
     });
     const bibliography = bibliographyObject.format("bibliography", {
       format: "text",
@@ -242,6 +250,7 @@ const CitationScreen = () => {
   };
 
   const insertCitation = () => {
+    setLoadingCitation(true);
     const allSelectedCitations = Object.entries(selectedCitations).filter((entry) => entry[1]);
     // @ts-ignore
     const citationObject = new Cite();
@@ -267,6 +276,7 @@ const CitationScreen = () => {
     addTextToBibliography(newBibliography);
 
     resetCitations(citations);
+    setLoadingCitation(false);
   };
 
   const hasSelectedCitations = useMemo(() => {
@@ -403,8 +413,8 @@ const CitationScreen = () => {
 
       {hasSelectedCitations && (
         <div className={css(styles.bottomDrawer)}>
-          <Button className={css(styles.button)} onClick={insertCitation}>
-            Insert Citation
+          <Button disabled={loadingCitation} className={css(styles.button)} onClick={insertCitation}>
+            {loadingCitation ? <Spinner /> : "Insert Citation"}
           </Button>
         </div>
       )}

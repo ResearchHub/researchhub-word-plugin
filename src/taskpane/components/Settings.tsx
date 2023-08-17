@@ -9,6 +9,7 @@ const Settings = ({ setCitationStyle, citationStyle }) => {
 
   const citationStyleChanged = (_, data) => {
     setCitationStyle(data.value);
+    window.localStorage.setItem("citation-style", data.value);
   };
 
   return (

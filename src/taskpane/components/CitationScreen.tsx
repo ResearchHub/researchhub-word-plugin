@@ -83,8 +83,26 @@ const CitationScreen = () => {
 
     if (contentControls) {
       contentControlsById.current = JSON.parse(contentControls);
+      window.contentControlsById = contentControlsById.current;
     }
   }, []);
+
+  async function contentControlAdded(event: Word.ContentControlAddedEventArgs) {
+    await Word.run(async (context) => {
+      console.log(`${event.eventType} event detected. IDs of content controls that were added:`);
+      console.log(event.ids);
+
+      try {
+        await rebalanceCitationsAfterReordering();
+      } catch (e) {
+        console.log(e);
+      }
+
+      const newBibliography = createBibliography();
+
+      addTextToBibliography(newBibliography);
+    });
+  }
 
   async function contentControlDataChanged(event: Word.ContentControlDataChangedEventArgs) {
     await Word.run(async (context) => {
@@ -93,12 +111,105 @@ const CitationScreen = () => {
     });
   }
 
+  async function rebalanceCitationsAfterReordering() {
+    await Word.run(async (context) => {
+      var contentControls = context.document.contentControls;
+
+      // Load the title property of each content control.
+      contentControls.load("id");
+
+      await context.sync();
+
+      alreadyCited.current = [];
+
+      const newCitationData = [];
+
+      for (let i = 0; i < contentControls.items.length; i++) {
+        const contentControl = contentControls.items[i];
+        if (contentControlsById.current[contentControl.id]) {
+          const entryId = contentControlsById.current[contentControl.id].entryId;
+          alreadyCited.current.push(entryId);
+
+          let newCitationObject = null;
+          const entryIdIndex = citationObject.current.getIds().indexOf(entryId);
+
+          if (entryIdIndex < 0) {
+            const json = Cite.input(entryId);
+            json[0].id = entryId;
+            newCitationObject = json[0];
+          } else {
+            const curCitationObject = citationObject.current.data;
+            newCitationObject = curCitationObject[entryIdIndex];
+          }
+
+          if (citationObject) {
+            newCitationData.push(newCitationObject);
+          }
+        }
+      }
+
+      console.log(newCitationData);
+      citationObject.current.set(newCitationData);
+
+      for (let i = 0; i < contentControls.items.length; i++) {
+        const contentControl = contentControls.items[i];
+        if (contentControlsById.current[contentControl.id]) {
+          const entryId = contentControlsById.current[contentControl.id].entryId;
+          const alreadyCitedIndex = alreadyCited.current.indexOf(entryId);
+
+          const text = citationObject.current.format("citation", {
+            format: "text",
+            template: citationStyle,
+            lang: "en-US",
+            entry: [entryId],
+            citationsPre: alreadyCited.current.slice(0, alreadyCitedIndex),
+          });
+
+          contentControl.insertText(`${text}`, Word.InsertLocation.replace);
+        }
+      }
+      await context.sync();
+    });
+  }
+
+  async function rebalanceCitations() {
+    await Word.run(async (context) => {
+      var contentControls = context.document.contentControls;
+
+      // Load the title property of each content control.
+      contentControls.load("id");
+
+      await context.sync();
+
+      for (let i = 0; i < contentControls.items.length; i++) {
+        const contentControl = contentControls.items[i];
+        if (contentControlsById.current[contentControl.id]) {
+          const entryId = contentControlsById.current[contentControl.id].entryId;
+          const alreadyCitedIndex = alreadyCited.current.indexOf(entryId);
+
+          const text = citationObject.current.format("citation", {
+            format: "text",
+            template: citationStyle,
+            lang: "en-US",
+            entry: [entryId],
+            citationsPre: alreadyCited.current.slice(0, alreadyCitedIndex),
+          });
+
+          contentControl.insertText(`${text}`, Word.InsertLocation.replace);
+        }
+      }
+      await context.sync();
+    });
+  }
+
   async function contentControlDeleted(event: Word.ContentControlDeletedEventArgs) {
     await Word.run(async (context) => {
+      console.log("IN CONTENT CONTROL DELETED");
       // First get the count of citations with that citation id
       // If there are more than 1 citation with the same citation id, that means we
       // Don't delete the item from the bibliography if this item gets deleted
       const toRemoveCount = {};
+
       Object.keys(contentControlsById.current).forEach((eventId) => {
         const entryId = contentControlsById.current[eventId].entryId;
         if (toRemoveCount[entryId]) {
@@ -109,7 +220,6 @@ const CitationScreen = () => {
       });
 
       const toRemove = {};
-      console.log(toRemoveCount);
       event.ids.forEach((eventId) => {
         const curCitationControl = contentControlsById.current[eventId];
         if (curCitationControl && toRemoveCount[curCitationControl.entryId] === 1) {
@@ -135,6 +245,12 @@ const CitationScreen = () => {
       citationObject.current.set(toKeep);
 
       window.localStorage.setItem(CITED_JSON_KEY, JSON.stringify(citationObject.current.data));
+
+      try {
+        await rebalanceCitations();
+      } catch (e) {
+        console.log(e);
+      }
 
       const newBibliography = createBibliography();
 
@@ -188,6 +304,13 @@ const CitationScreen = () => {
     contentControlItem.onDataChanged.add(contentControlDataChanged);
     contentControlItem.onDeleted.add(contentControlDeleted);
     contentControlItem.track();
+    console.log("Added event handler for data change and delete.");
+    await Word.run(async (context) => {
+      const eventContext = context.document.onContentControlAdded.add(contentControlAdded);
+      await context.sync();
+
+      console.log("Added event handler for when content controls are added.");
+    });
   }
 
   async function insertTextWithNewLines(text, insertElement, location) {
@@ -235,8 +358,9 @@ const CitationScreen = () => {
       const newContentControlsById = { ...contentControlsById.current };
       const contentControls = context.document.contentControls;
 
+      range.insertText(` `, Word.InsertLocation.end);
       // Queue a command to insert text at the end of the selection.
-      wordContentControl.insertText(` ${text}`, Word.InsertLocation.end);
+      wordContentControl.insertText(`${text}`, Word.InsertLocation.end);
       range.insertText(` `, Word.InsertLocation.end);
 
       // Queue a command to load the id property for all of content controls.
@@ -368,9 +492,8 @@ const CitationScreen = () => {
       citationsPre: alreadyCited.current,
     });
 
-    alreadyCited.current.push(entryId);
-
     addTextAfterSelection(inlineCitation, allSelectedCitations, entryId);
+    alreadyCited.current.push(entryId);
 
     const newBibliography = createBibliography(citationObject);
 

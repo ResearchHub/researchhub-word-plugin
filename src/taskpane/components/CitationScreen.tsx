@@ -41,6 +41,8 @@ const CitationScreen = () => {
   const citationObject = useRef(new Cite());
   const alreadyCited = useRef([]);
 
+  const insertCitationRef = useRef(false);
+
   const onTabSelect = (event: SelectTabEvent, data: SelectTabData) => {
     setActiveTab(data.value);
   };
@@ -88,20 +90,22 @@ const CitationScreen = () => {
   }, []);
 
   async function contentControlAdded(event: Word.ContentControlAddedEventArgs) {
-    await Word.run(async (context) => {
-      console.log(`${event.eventType} event detected. IDs of content controls that were added:`);
-      console.log(event.ids);
+    if (!insertCitationRef.current) {
+      await Word.run(async (context) => {
+        // Load the title property
+        await context.sync();
 
-      try {
-        await rebalanceCitationsAfterReordering();
-      } catch (e) {
-        console.log(e);
-      }
-
-      const newBibliography = createBibliography();
-
-      addTextToBibliography(newBibliography);
-    });
+        console.log(`${event.eventType} event detected. IDs of content controls that were added:`);
+        console.log(event.ids);
+        try {
+          await rebalanceCitationsAfterReordering();
+        } catch (e) {
+          console.log(e);
+        }
+      });
+    } else {
+      insertCitationRef.current = false;
+    }
   }
 
   async function contentControlDataChanged(event: Word.ContentControlDataChangedEventArgs) {
@@ -115,23 +119,25 @@ const CitationScreen = () => {
     await Word.run(async (context) => {
       var contentControls = context.document.contentControls;
 
-      // Load the title property of each content control.
-      contentControls.load("id");
+      // Load the id property of each content control.
+      contentControls.load("id,title,tag");
 
       await context.sync();
 
       alreadyCited.current = [];
 
       const newCitationData = [];
+      const idOrder = [];
+      const currentIds = citationObject.current.getIds();
 
       for (let i = 0; i < contentControls.items.length; i++) {
         const contentControl = contentControls.items[i];
-        if (contentControlsById.current[contentControl.id]) {
-          const entryId = contentControlsById.current[contentControl.id].entryId;
+        if (contentControl.title === "Citation") {
+          const entryId = contentControl.tag;
           alreadyCited.current.push(entryId);
 
           let newCitationObject = null;
-          const entryIdIndex = citationObject.current.getIds().indexOf(entryId);
+          const entryIdIndex = currentIds.indexOf(entryId);
 
           if (entryIdIndex < 0) {
             const json = Cite.input(entryId);
@@ -144,17 +150,17 @@ const CitationScreen = () => {
 
           if (citationObject) {
             newCitationData.push(newCitationObject);
+            idOrder.push(newCitationObject.id);
           }
         }
       }
 
-      console.log(newCitationData);
       citationObject.current.set(newCitationData);
 
       for (let i = 0; i < contentControls.items.length; i++) {
         const contentControl = contentControls.items[i];
-        if (contentControlsById.current[contentControl.id]) {
-          const entryId = contentControlsById.current[contentControl.id].entryId;
+        if (contentControl.title === "Citation") {
+          const entryId = contentControl.tag;
           const alreadyCitedIndex = alreadyCited.current.indexOf(entryId);
 
           const text = citationObject.current.format("citation", {
@@ -169,6 +175,20 @@ const CitationScreen = () => {
         }
       }
       await context.sync();
+      let resetBibliography = false;
+
+      for (let i = 0; i < currentIds.length; i++) {
+        if (currentIds[i] !== idOrder[i]) {
+          resetBibliography = true;
+          break;
+        }
+      }
+
+      if (resetBibliography) {
+        const newBibliography = createBibliography();
+
+        addTextToBibliography(newBibliography);
+      }
     });
   }
 
@@ -350,7 +370,7 @@ const CitationScreen = () => {
       var range = doc.getSelection();
       const rangeTarget = range.getRange("End");
       const wordContentControl = rangeTarget.insertContentControl();
-      wordContentControl.tag = "citation";
+      wordContentControl.tag = entryId;
       wordContentControl.title = "Citation";
       wordContentControl.cannotEdit = false;
       wordContentControl.appearance = "BoundingBox";
@@ -465,6 +485,7 @@ const CitationScreen = () => {
 
   const insertCitation = () => {
     setLoadingCitation(true);
+    insertCitationRef.current = true;
     const allSelectedCitations = Object.entries(selectedCitations).filter((entry) => entry[1]);
     let entryId = null;
     // @ts-ignore

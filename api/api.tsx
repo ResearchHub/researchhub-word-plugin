@@ -1,5 +1,5 @@
 const BASE_URL =
-  process.env.NODE_ENV === "production" ? "https://backend.researchhub.com/api/" : "https://researchhub.ngrok.io";
+  process.env.NODE_ENV === "production" ? "https://backend.researchhub.com" : "https://researchhub.ngrok.io";
 export const RESEARCHHUB_AUTH_TOKEN = "researchhub.auth.token";
 
 export const generateApiUrl = (url: string, queryparams?: string) => {

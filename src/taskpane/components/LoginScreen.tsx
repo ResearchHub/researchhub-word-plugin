@@ -55,30 +55,13 @@ const LoginScreen = ({ setIsLoggedIn, authenticator }) => {
             }
           } catch (e) {
             console.log(e);
-            await Word.run(async (context) => {
-              // Create a proxy object for the document.
-              var doc = context.document;
-
-              // Queue a command to get the current selection and then create a proxy range object with the results.
-              var range = doc.getSelection();
-
-              // Synchronize the document state by executing the queued commands,
-              // and return a promise to indicate task completion.
-              await context.sync();
-
-              // Queue a command to insert text at the end of the selection.
-              range.insertText(e, Word.InsertLocation.end);
-
-              // Synchronize the document state by executing the queued commands,
-              // and return a promise to indicate task completion.
-              return context.sync().then(function () {
-                console.log("Text added after the selection.");
-              });
-            });
           }
         }
       })
-      .catch(Utilities.log);
+      .catch((error) => {
+        Utilities.log(error);
+        console.log(error);
+      });
   }
 
   return (

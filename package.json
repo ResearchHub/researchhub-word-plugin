@@ -23,7 +23,8 @@
     "start:web": "office-addin-debugging start manifest.xml web",
     "stop": "office-addin-debugging stop manifest.xml",
     "validate": "office-addin-manifest validate manifest.xml",
-    "watch": "webpack --mode development --watch"
+    "watch": "webpack --mode development --watch",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "@citation-js/plugin-bibtex": "^0.6.8",
@@ -55,6 +56,7 @@
     "eslint-plugin-office-addins": "^2.1.5",
     "eslint-plugin-react": "^7.28.0",
     "file-loader": "^6.2.0",
+    "gh-pages": "^6.0.0",
     "html-loader": "^4.1.0",
     "html-webpack-plugin": "^5.5.0",
     "less": "^3.9.0",

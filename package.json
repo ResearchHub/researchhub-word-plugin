@@ -24,7 +24,7 @@
     "stop": "office-addin-debugging stop manifest.xml",
     "validate": "office-addin-manifest validate manifest.xml",
     "watch": "webpack --mode development --watch",
-    "deploy": "gh-pages -d dist"
+    "deploy": "echo word.researchhub.com > ./build/CNAME && gh-pages -d dist"
   },
   "dependencies": {
     "@citation-js/plugin-bibtex": "^0.6.8",

@@ -46,12 +46,17 @@ initializeIcons();
 let isOfficeInitialized = false;
 
 const title = "ResearchHub Add In";
-
 var authenticator = new Authenticator();
-const GOOGLE_CLIENT_ID = "192509748493-uuidcme05mco3k32188n8qvih89j46jd.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID =
+  process.env.NODE_ENV === "production"
+    ? "192509748493-3enrmve4vlikpff88lujns7b4d72hgbg.apps.googleusercontent.com"
+    : "192509748493-uuidcme05mco3k32188n8qvih89j46jd.apps.googleusercontent.com";
 // register Google endpoint using
 authenticator.endpoints.registerGoogleAuth(GOOGLE_CLIENT_ID, {
-  redirectUrl: "https://localhost:3000/taskpane.html",
+  redirectUrl:
+    process.env.NODE_ENV === "production"
+      ? "https://word.researchhub.com/taskpane.html"
+      : "https://localhost:3000/taskpane.html",
 });
 
 const render = (Component) => {

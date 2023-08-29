@@ -87,7 +87,7 @@ const LoginScreen = ({ setIsLoggedIn, authenticator }) => {
       <div className={css(styles.container)}>
         <h2 className={css(styles.header)}>Welcome to ResearchHub 👋</h2>
         <p>We are an open-science platform that enables discussions, peer-reviews, publications and more.</p>
-        <div>
+        {/* <div>
           <Input placeholder="Email" className={css(styles.input)} />
         </div>
         <div style={{ marginTop: 16 }}>
@@ -114,7 +114,7 @@ const LoginScreen = ({ setIsLoggedIn, authenticator }) => {
           >
             or
           </span>
-        </div>
+        </div> */}
         <Button
           className={css(styles.googleLoginButton)}
           icon={<i className="fa-brands fa-google"></i>}

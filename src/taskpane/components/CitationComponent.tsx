@@ -18,16 +18,16 @@ const CitationComponent = ({ citation, selectedCitations, citationClicked, index
       <div className={css(styles.citationLabel)} onClick={() => citationClicked(index)}>
         <p className={css(styles.citationTitle)}>{citation.fields.title}</p>
         <p>
-          {citation.fields.creators.map((creator, index) => {
-            if (index === 3 && index !== citation.fields.creators.length - 1) {
+          {citation.fields?.author?.map((creator, index) => {
+            if (index === 3 && index !== citation.fields?.author?.length - 1) {
               return "... ";
             }
-            if (index > 2 && index !== citation.fields.creators.length - 1) {
+            if (index > 2 && index !== citation.fields?.author?.length - 1) {
               return null;
             }
-            return creator.first_name + " " + creator.last_name[0] + "., ";
+            return creator.given + " " + creator.family[0] + "., ";
           })}
-          {citation.fields.date.split("-")[0]}
+          {citation.fields.issued && citation.fields.issued["date-parts"][0]}
         </p>
       </div>
     </div>

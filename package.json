@@ -24,7 +24,8 @@
     "stop": "office-addin-debugging stop manifest-researchhub.xml",
     "validate": "office-addin-manifest validate manifest-researchhub.xml",
     "watch": "webpack --mode development --watch",
-    "deploy": "yarn run build && echo word.researchhub.com > ./dist/CNAME && gh-pages -d dist"
+    "deploy": "yarn run build && echo word.researchhub.com > ./dist/CNAME && gh-pages -d dist",
+    "deploy:gh": "echo word.researchhub.com > ./dist/CNAME && gh-pages -d dist"
   },
   "dependencies": {
     "@citation-js/plugin-bibtex": "^0.6.8",

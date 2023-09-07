@@ -9,6 +9,7 @@ import { Input, Button } from "@fluentui/react-components";
 import GoogleLogin from "./GoogleLogin";
 import { Authenticator, DefaultEndpoints, Utilities } from "@microsoft/office-js-helpers";
 import { POST_CONFIG, RESEARCHHUB_AUTH_TOKEN, generateApiUrl } from "../../../api/api";
+import { Spinner, SpinnerSize } from "@fluentui/react";
 
 /* global Word, require */
 
@@ -18,8 +19,55 @@ export interface AppProps {
 }
 
 const LoginScreen = ({ setIsLoggedIn, authenticator }) => {
+  const [passwordScreen, setPasswordScreen] = React.useState(false);
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [loginError, setLoginError] = React.useState("");
+  const [isLoading, setIsLoading] = React.useState(false);
   const loginWithGoogle = () => {
     setIsLoggedIn();
+  };
+
+  const nextScreen = (e) => {
+    e.preventDefault();
+
+    if (!passwordScreen) {
+      return setPasswordScreen(true);
+    } else {
+      loginApi();
+    }
+  };
+
+  const loginWithEmail = async (params) => {
+    const postConfig = POST_CONFIG({ data: params });
+    const url = generateApiUrl("auth/login");
+
+    delete postConfig["headers"]["Authorization"];
+
+    const resp = await fetch(url, postConfig);
+
+    try {
+      if (resp.ok) {
+        const json = await resp.json();
+        setIsLoggedIn(true);
+        window.localStorage.setItem(RESEARCHHUB_AUTH_TOKEN, json.key);
+      } else {
+        const json = await resp.json();
+        console.log(json);
+        setLoginError("Unable to log in with provided credentials.");
+      }
+    } catch (e) {
+      console.log(e);
+    }
+
+    return resp;
+  };
+
+  const loginApi = async () => {
+    setIsLoading(true);
+    const response: any = await loginWithEmail({ email, password });
+
+    setIsLoading(false);
   };
 
   function getAuthCode() {
@@ -46,7 +94,6 @@ const LoginScreen = ({ setIsLoggedIn, authenticator }) => {
             delete config["headers"]["Authorization"];
 
             const res = await fetch(url, config);
-            const auth = window.localStorage.getItem(RESEARCHHUB_AUTH_TOKEN);
 
             if (res.ok) {
               const json = await res.json();
@@ -70,12 +117,45 @@ const LoginScreen = ({ setIsLoggedIn, authenticator }) => {
       <div className={css(styles.container)}>
         <h2 className={css(styles.header)}>Welcome to ResearchHub 👋</h2>
         <p>We are an open-science platform that enables discussions, peer-reviews, publications and more.</p>
-        {/* <div>
-          <Input placeholder="Email" className={css(styles.input)} />
-        </div>
-        <div style={{ marginTop: 16 }}>
-          <DefaultButton className={css(styles.button)}>Continue</DefaultButton>
-        </div>
+        <form onSubmit={nextScreen}>
+          {passwordScreen ? (
+            <>
+              <Input
+                placeholder="Email"
+                className={css(styles.input)}
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <Input
+                placeholder="Password"
+                className={css(styles.input)}
+                style={{ marginTop: 16 }}
+                type="password"
+                autoFocus
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              {loginError && <div style={{ marginTop: 8, color: "red" }}>{loginError}</div>}
+            </>
+          ) : (
+            <Input
+              placeholder="Email"
+              className={css(styles.input)}
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          )}
+          <div style={{ marginTop: 16 }}>
+            <DefaultButton className={css(styles.button)} type="submit">
+              {isLoading ? <Spinner size={SpinnerSize.small} /> : passwordScreen ? "Login" : "Continue"}
+            </DefaultButton>
+          </div>
+        </form>
         <div
           style={{
             borderTop: `1px solid #ddd`,
@@ -97,7 +177,7 @@ const LoginScreen = ({ setIsLoggedIn, authenticator }) => {
           >
             or
           </span>
-        </div> */}
+        </div>
         <Button
           className={css(styles.googleLoginButton)}
           icon={<i className="fa-brands fa-google"></i>}

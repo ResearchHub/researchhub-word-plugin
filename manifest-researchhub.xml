@@ -5,7 +5,7 @@
   <ProviderName>ResearchHub</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="ResearchHub Citations"/>
-  <Description DefaultValue="A template to get started."/>
+  <Description DefaultValue="ResearchHub's Citation Tool."/>
   <IconUrl DefaultValue="https://word.researchhub.com/assets/icon-32.png"/>
   <HighResolutionIconUrl DefaultValue="https://word.researchhub.com/assets/icon-64.png"/>
   <SupportUrl DefaultValue="https://researchhub.notion.site/ResearchHub-a2a87270ebcf43ffb4b6050e3b766ba0"/>

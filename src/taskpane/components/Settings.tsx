@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { Icon } from "@fluentui/react/lib/Icon";
 import { StyleSheet, css } from "aphrodite";
-import { Radio, RadioGroup, useId } from "@fluentui/react-components";
+import { Button, Radio, RadioGroup, useId } from "@fluentui/react-components";
+import { RESEARCHHUB_AUTH_TOKEN } from "../../../api/api";
 
-const Settings = ({ setCitationStyle, citationStyle }) => {
+const Settings = ({ setCitationStyle, citationStyle, setIsLoggedIn }) => {
   const radioName = useId("radio");
   const labelId = useId("label");
 
@@ -23,6 +24,15 @@ const Settings = ({ setCitationStyle, citationStyle }) => {
         <Radio name={radioName} value="ieee" label="IEEE" />
         <Radio name={radioName} value="nature" label="Nature" />
       </RadioGroup>
+      <Button
+        className={css(styles.button)}
+        onClick={() => {
+          window.localStorage.removeItem(RESEARCHHUB_AUTH_TOKEN);
+          setIsLoggedIn(false);
+        }}
+      >
+        Sign Out
+      </Button>
     </div>
   );
 };
@@ -33,5 +43,9 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 18,
     fontWeight: 500,
+  },
+  button: {
+    marginTop: 32,
+    width: "100%",
   },
 });

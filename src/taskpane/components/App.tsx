@@ -41,7 +41,9 @@ const App = ({ authenticator }) => {
       <ActiveFolderContextProvider>
         <div>
           {isLoggedIn ? (
-            <div>{whichScreen === "citation-screen" ? <CitationScreen /> : <div></div>}</div>
+            <div>
+              {whichScreen === "citation-screen" ? <CitationScreen setIsLoggedIn={setIsLoggedIn} /> : <div></div>}
+            </div>
           ) : (
             <LoginScreen setIsLoggedIn={setIsLoggedIn} authenticator={authenticator} />
           )}

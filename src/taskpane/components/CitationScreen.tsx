@@ -22,7 +22,7 @@ import { Spinner } from "@fluentui/react";
 
 const CITED_JSON_KEY = "cited-json";
 
-const CitationScreen = () => {
+const CitationScreen = ({ setIsLoggedIn }) => {
   const [citations, setCitations] = useState([]);
   const [folders, setFolders] = useState([]);
   const [tabHover, setTabHover] = useState("");
@@ -652,7 +652,7 @@ const CitationScreen = () => {
       </ReactPlaceholder>
       {activeTab === "settings" && (
         <div>
-          <Settings setCitationStyle={setCitationStyle} citationStyle={citationStyle} />
+          <Settings setCitationStyle={setCitationStyle} citationStyle={citationStyle} setIsLoggedIn={setIsLoggedIn} />
         </div>
       )}
 

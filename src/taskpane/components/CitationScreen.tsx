@@ -313,7 +313,7 @@ const CitationScreen = ({ setIsLoggedIn }) => {
     if (currentOrg.id) {
       getCitations();
     }
-  }, [currentOrg.id]);
+  }, [currentOrg]);
 
   const citationClicked = (index) => {
     const newCitations = { ...selectedCitations };

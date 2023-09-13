@@ -45,7 +45,10 @@ export const OrganizationContextProvider = ({ children, isLoggedIn }) => {
 
       setOrgs(userOrgs);
       const lastSetId = window.localStorage.getItem("lastOrgId");
-      const org = userOrgs.find((org) => org.id === parseInt(lastSetId, 10));
+      let org = userOrgs[0];
+      if (lastSetId) {
+        org = userOrgs.find((org) => org.id === parseInt(lastSetId, 10));
+      }
       setCurrentOrg(org);
     } catch (error) {
       // captureEvent({

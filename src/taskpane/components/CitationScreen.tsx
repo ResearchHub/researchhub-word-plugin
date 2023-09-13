@@ -19,6 +19,7 @@ import { GET_CONFIG, generateApiUrl } from "../../../api/api";
 import ieee from "../../../assets/csl_styles/ieee.csl";
 import nature from "../../../assets/csl_styles/nature.csl";
 import { Spinner } from "@fluentui/react";
+import OrganizationPopover from "./OrganizationPopover";
 
 const CITED_JSON_KEY = "cited-json";
 
@@ -567,6 +568,7 @@ const CitationScreen = ({ setIsLoggedIn }) => {
 
   return (
     <div className={css(styles.container)}>
+      <OrganizationPopover />
       <div className={css(styles.searchContainer)}>
         <Input
           placeholder={"Search for a citation"}

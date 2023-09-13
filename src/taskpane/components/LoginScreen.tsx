@@ -1,13 +1,9 @@
 // @ts-nocheck
 import * as React from "react";
 import { DefaultButton } from "@fluentui/react";
-import Header from "./Header";
-import HeroList, { HeroListItem } from "./HeroList";
-import Progress from "./Progress";
 import { StyleSheet, css } from "aphrodite";
 import { Input, Button } from "@fluentui/react-components";
-import GoogleLogin from "./GoogleLogin";
-import { Authenticator, DefaultEndpoints, Utilities } from "@microsoft/office-js-helpers";
+import { DefaultEndpoints, Utilities } from "@microsoft/office-js-helpers";
 import { POST_CONFIG, RESEARCHHUB_AUTH_TOKEN, generateApiUrl } from "../../../api/api";
 import { Spinner, SpinnerSize } from "@fluentui/react";
 

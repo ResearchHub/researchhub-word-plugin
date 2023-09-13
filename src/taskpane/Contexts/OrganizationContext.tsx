@@ -20,6 +20,7 @@ type Org = {
   id?: number;
   name?: string;
   slug?: string;
+  member_count?: number;
 };
 
 const OrganizationContext = createContext<ContextType>({
@@ -34,7 +35,7 @@ export const useOrgs = () => useContext(OrganizationContext);
 
 export const OrganizationContextProvider = ({ children, isLoggedIn }) => {
   const [orgs, setOrgs] = useState([]);
-  const [currentOrg, setCurrentOrg] = useState({});
+  const [currentOrg, setCurrentOrg] = useState<Org>({});
   const [fetchTime, setFetchTime] = useState(Date.now());
   const fetchAndSetUserOrgs = async () => {
     let userOrgs;
@@ -43,7 +44,9 @@ export const OrganizationContextProvider = ({ children, isLoggedIn }) => {
       userOrgs = await fetchUserOrgs();
 
       setOrgs(userOrgs);
-      setCurrentOrg(userOrgs[0]);
+      const lastSetId = window.localStorage.getItem("lastOrgId");
+      const org = userOrgs.find((org) => org.id === parseInt(lastSetId, 10));
+      setCurrentOrg(org);
     } catch (error) {
       // captureEvent({
       //   error,
@@ -58,6 +61,12 @@ export const OrganizationContextProvider = ({ children, isLoggedIn }) => {
       fetchAndSetUserOrgs();
     }
   }, [fetchTime, isLoggedIn]);
+
+  useEffect(() => {
+    if (Object.keys(currentOrg).length) {
+      window.localStorage.setItem("lastOrgId", currentOrg.id.toString());
+    }
+  }, [currentOrg]);
 
   return (
     <OrganizationContext.Provider

@@ -25,7 +25,7 @@ const CitationComponent = ({ citation, selectedCitations, citationClicked, index
             if (index > 2 && index !== citation.fields?.author?.length - 1) {
               return null;
             }
-            return creator.given + " " + creator.family[0] + "., ";
+            return creator.family + " " + creator.given[0] + "., ";
           })}
           {citation.fields.issued && citation.fields.issued["date-parts"][0]}
         </p>

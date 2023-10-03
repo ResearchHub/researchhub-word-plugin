@@ -33,7 +33,7 @@ const CitationComponent = ({ citation, selectedCitations, citationClicked, index
             }
             return creator.family + givenInitial;
           })}
-          {citation.fields.issued && citation.fields.issued["date-parts"][0]}
+          {citation.fields.issued && citation.fields.issued["date-parts"] && citation.fields.issued["date-parts"][0]}
         </p>
       </div>
     </div>

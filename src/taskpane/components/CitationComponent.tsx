@@ -19,13 +19,19 @@ const CitationComponent = ({ citation, selectedCitations, citationClicked, index
         <p className={css(styles.citationTitle)}>{citation.fields.title}</p>
         <p>
           {citation.fields?.author?.map((creator, index) => {
+            let givenInitial = "";
+
+            if (creator.given && creator.given[0]) {
+              givenInitial = " " + creator.given[0] + "., ";
+            }
+
             if (index === 3 && index !== citation.fields?.author?.length - 1) {
               return "... ";
             }
             if (index > 2 && index !== citation.fields?.author?.length - 1) {
               return null;
             }
-            return creator.family + " " + creator.given[0] + "., ";
+            return creator.family + givenInitial;
           })}
           {citation.fields.issued && citation.fields.issued["date-parts"][0]}
         </p>
